@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repository / คลังข้อมูล</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Sarabun', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Navigation Bar -->
+  <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <i class="fa-solid fa-boxes-packing text-2xl text-amber-300"></i>
+        <h1 class="text-xl font-bold tracking-wide" id="nav-title">คลังข้อมูลความรู้ (Knowledge Repository)</h1>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- Language Switcher -->
+        <div class="inline-flex rounded-md shadow-sm" role="group">
+          <button id="lang-th-btn" onclick="setLanguage('th')" class="px-3 py-1 text-xs font-semibold rounded-l-lg border border-indigo-400 bg-indigo-900 text-white hover:bg-indigo-800">
+            🇹🇭 TH
+          </button>
+          <button id="lang-en-btn" onclick="setLanguage('en')" class="px-3 py-1 text-xs font-semibold rounded-r-lg border border-indigo-400 bg-indigo-600 text-indigo-100 hover:bg-indigo-800">
+            🇬🇧 EN
+          </button>
+        </div>
+
+        <!-- Export/Import Buttons -->
+        <button onclick="exportData()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-download"></i> <span data-i18n="export">ส่งออก</span>
+        </button>
+        <label class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1.5 cursor-pointer transition">
+          <i class="fa-solid fa-upload"></i> <span data-i18n="import">นำเข้า</span>
+          <input type="file" id="import-file-input" onchange="importData(event)" class="hidden" accept=".json">
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-6">
+
+    <!-- Sidebar / Categories -->
+    <aside class="md:col-span-1 space-y-6">
+
+      <!-- Quick Stats Card -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-xs uppercase font-semibold text-slate-400 tracking-wider mb-3" data-i18n="statsOverview">สรุปภาพรวม</h2>
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+            <span class="block text-2xl font-bold text-indigo-600" id="stat-total-items">0</span>
+            <span class="text-xs text-slate-500" data-i18n="totalItems">รายการทั้งหมด</span>
+          </div>
+          <div class="bg-amber-50 p-3 rounded-lg border border-amber-100">
+            <span class="block text-2xl font-bold text-amber-600" id="stat-total-categories">0</span>
+            <span class="text-xs text-slate-500" data-i18n="totalCategories">หมวดหมู่ทั้งหมด</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories Filter List -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider" data-i18n="categories">หมวดหมู่</h2>
+          <button onclick="openCategoryModal()" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-plus"></i> <span data-i18n="add">เพิ่ม</span>
+          </button>
+        </div>
+        <ul id="categories-list" class="space-y-1 text-sm">
+          <!-- Populated dynamically -->
+        </ul>
+      </div>
+
+    </aside>
+
+    <!-- Content Area -->
+    <section class="md:col-span-3 space-y-4">
+
+      <!-- Action & Search Bar -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div class="relative w-full sm:w-80">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+          <input type="text" id="search-input" onkeyup="handleSearch()" placeholder="ค้นหาข้อมูล..." data-i18n-placeholder="searchPlaceholder" class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+        </div>
+
+        <button onclick="openItemModal()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 shadow-sm transition">
+          <i class="fa-solid fa-plus"></i> <span data-i18n="addItem">เพิ่มรายการใหม่</span>
+        </button>
+      </div>
+
+      <!-- Items Grid / List -->
+      <div id="items-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Item Cards will be dynamically inserted here -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
+        <i class="fa-regular fa-folder-open text-4xl text-slate-300 mb-3"></i>
+        <p class="text-slate-500 text-sm font-medium" data-i18n="noItemsFound">ไม่พบข้อมูลในหมวดหมู่นี้</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ITEM MODAL (Create/Edit) -->
+  <div id="item-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+        <h3 id="item-modal-title" class="font-bold text-slate-800" data-i18n="addItem">เพิ่มรายการใหม่</h3>
+        <button onclick="closeItemModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+
+      <form id="item-form" onsubmit="saveItem(event)" class="p-6 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="item-id">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="titleTh">ชื่อรายการ (ภาษาไทย) *</label>
+            <input type="text" id="item-title-th" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="titleEn">Title (English) *</label>
+            <input type="text" id="item-title-en" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="category">หมวดหมู่</label>
+          <select id="item-category" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+            <!-- Dynamic options -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="descTh">คำอธิบายสั้น (ไทย)</label>
+            <textarea id="item-desc-th" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="descEn">Short Description (EN)</label>
+            <textarea id="item-desc-en" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="contentTh">เนื้อหา / ข้อมูลเชิงลึก (ไทย)</label>
+            <textarea id="item-content-th" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="contentEn">Detailed Content (EN)</label>
+            <textarea id="item-content-en" rows="4" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="tags">แท็ก (คั่นด้วยเครื่องหมายจุลภาค ,)</label>
+          <input type="text" id="item-tags" placeholder="e.g. docs, guide, internal" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 flex justify-end gap-2">
+          <button type="button" onclick="closeItemModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm hover:bg-slate-50" data-i18n="cancel">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700" data-i18n="save">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CATEGORY MODAL (Create/Edit) -->
+  <div id="category-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+        <h3 id="category-modal-title" class="font-bold text-slate-800" data-i18n="addCategory">เพิ่มหมวดหมู่</h3>
+        <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+
+      <form id="category-form" onsubmit="saveCategory(event)" class="p-6 space-y-4">
+        <input type="hidden" id="category-id">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="catTh">ชื่อหมวดหมู่ (ไทย) *</label>
+          <input type="text" id="cat-name-th" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="catEn">Category Name (EN) *</label>
+          <input type="text" id="cat-name-en" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="descTh">คำอธิบาย (ไทย)</label>
+          <textarea id="cat-desc-th" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" data-i18n="descEn">Description (EN)</label>
+          <textarea id="cat-desc-en" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 flex justify-end gap-2">
+          <button type="button" onclick="closeCategoryModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm hover:bg-slate-50" data-i18n="cancel">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700" data-i18n="save">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- VIEW ITEM DETAIL MODAL -->
+  <div id="view-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 bg-indigo-700 text-white flex justify-between items-center">
+        <span id="view-category-badge" class="px-2.5 py-1 bg-indigo-900 text-amber-300 rounded-md text-xs font-semibold tracking-wide">Category</span>
+        <button onclick="closeViewModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4 overflow-y-auto flex-1">
+        <h2 id="view-title" class="text-xl font-bold text-slate-800"></h2>
+        <p id="view-desc" class="text-sm text-slate-600 italic border-l-4 border-indigo-500 pl-3 py-1 bg-slate-50 rounded-r"></p>
+
+        <div class="pt-2">
+          <h4 class="text-xs font-semibold uppercase text-slate-400 mb-1" data-i18n="content">เนื้อหา / รายละเอียด</h4>
+          <div id="view-content" class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[100px]"></div>
+        </div>
+
+        <div class="pt-2">
+          <h4 class="text-xs font-semibold uppercase text-slate-400 mb-1" data-i18n="tags">แท็ก</h4>
+          <div id="view-tags" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-400">
+        <span id="view-date"></span>
+        <button onclick="closeViewModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-medium" data-i18n="close">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
