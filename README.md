@@ -1,2 +1,2 @@
 # repository
-My repository on GitHub
+My repository 
